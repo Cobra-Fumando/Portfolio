@@ -16,7 +16,7 @@ Hash seguro de senhas
 ⚙️ Pré-requisitos
 Antes de rodar o projeto, certifique-se de ter instalado:
 
-.NET 6.0 ou superior
+.NET 8.0 ou superior
 
 PostgreSQL
 
