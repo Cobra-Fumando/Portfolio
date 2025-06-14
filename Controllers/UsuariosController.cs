@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
@@ -117,8 +118,9 @@ namespace Portfolio.Controllers
             });
         }
 
+        [Authorize]
         [EnableRateLimiting("Fixed")]
-        [HttpDelete("Deletar")]
+        [HttpDelete("Desconectar")]
         public async Task<IActionResult> Disconnect([FromBody] TokenDto Token)
         {
             try

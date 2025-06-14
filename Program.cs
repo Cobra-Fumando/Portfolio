@@ -23,11 +23,13 @@ options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")
 
 builder.Services.AddScoped<IProjeto, Projeto>();
 builder.Services.AddScoped<IUsers, Users>();
+builder.Services.AddScoped<IAdmin, Admin>();
 builder.Services.AddScoped<Token>();
 builder.Services.AddScoped<IPasswordHasher<Usuarios>, PasswordHasher<Usuarios>>();
 builder.Services.AddTransient<Hash>();
 
 var key = Encoding.UTF8.GetBytes(builder.Configuration["Token:Key"]);
+var keyAdmin = Encoding.UTF8.GetBytes(builder.Configuration["TokenAdmin:Key"]);
 
 builder.Services.AddAuthentication("Usuarios")
     .AddJwtBearer("Usuarios", options =>
@@ -40,6 +42,19 @@ builder.Services.AddAuthentication("Usuarios")
             ValidateIssuerSigningKey = true,
             ValidAudience = builder.Configuration["Token:Audience"],
             ValidIssuer = builder.Configuration["Token:Issuer"],
+            IssuerSigningKey = new SymmetricSecurityKey(key)
+        };
+    })
+    .AddJwtBearer("Administrador", options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters 
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidAudience = builder.Configuration["TokenAdmin:Audience"],
+            ValidIssuer = builder.Configuration["TokenAdmin:Issuer"],
             IssuerSigningKey = new SymmetricSecurityKey(key)
         };
     });
@@ -68,6 +83,17 @@ builder.Services.AddRateLimiter(options =>
     {
         config.Window = TimeSpan.FromSeconds(5);
         config.PermitLimit = 5;
+        config.QueueLimit = 0;
+        config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+    });
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("Adm", config =>
+    {
+        config.Window = TimeSpan.FromSeconds(5);
+        config.PermitLimit = 20;
         config.QueueLimit = 0;
         config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
     });
