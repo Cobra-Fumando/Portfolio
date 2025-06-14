@@ -22,7 +22,7 @@ namespace Portfolio.Controllers
 
         [EnableRateLimiting("Fixed")]
         [HttpPost("Adicionar")]
-        public async Task<IActionResult> add(Usuarios usuarios)
+        public async Task<IActionResult> add([FromBody] Usuarios usuarios)
         {
             try
             {
@@ -53,7 +53,7 @@ namespace Portfolio.Controllers
 
         [EnableRateLimiting("Fixed")]
         [HttpPost("Logar")]
-        public async Task<IActionResult> Logar(Logar login) 
+        public async Task<IActionResult> Logar([FromBody] Logar login) 
         {
             try
             {
@@ -77,7 +77,6 @@ namespace Portfolio.Controllers
                 return Ok(new {
                     Mensagem = token.Message, 
                     Token = token.Dados.ElementAtOrDefault(0),
-                    RefreshToken = token.Dados.ElementAtOrDefault(1)
                 });
             }catch(Exception ex)
             {
@@ -116,6 +115,33 @@ namespace Portfolio.Controllers
                 Nome = result.Dados.Name,
                 Foto = result.Dados.Picture
             });
+        }
+
+        [EnableRateLimiting("Fixed")]
+        [HttpDelete("Deletar")]
+        public async Task<IActionResult> Disconnect([FromBody] TokenDto Token)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(Token.IdToken))
+                {
+                    return BadRequest(new {Message = "Precisa do Token"});
+                }
+
+                var resposta = await users.Disconnect(Token).ConfigureAwait(false);
+
+                if (!resposta.success)
+                {
+                    return NotFound(new {Message = resposta.Message});
+                }
+
+                return Ok(new {Message = resposta.Message});
+
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Erro inesperado: {ex.Message}");
+            }
         }
     }
 }

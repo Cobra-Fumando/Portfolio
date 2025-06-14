@@ -14,12 +14,14 @@ namespace Portfolio.Classes
         private readonly AppDbContext Context;
         private readonly Token token;
         private readonly Hash hasher;
-        public Users(ILogger<Users> logger, AppDbContext context, Hash hasher, Token token)
+        private readonly IHttpContextAccessor responseCookies;
+        public Users(ILogger<Users> logger, AppDbContext context, Hash hasher, Token token, IHttpContextAccessor responseCookies)
         {
             this.logger = logger;
             this.Context = context;
             this.hasher = hasher;
             this.token = token;
+            this.responseCookies = responseCookies;
         }
 
         private async Task<TabelaProblem<bool>> ValidarToken(string Email)
@@ -150,7 +152,16 @@ namespace Portfolio.Classes
                 if (!achar.success || achar.Dados)
                 {
                     var RefreshToken = token.GenerateRefreshToken();
-                    log.Dados.Add(RefreshToken);
+
+                    CookieOptions options = new CookieOptions
+                    {
+                        HttpOnly = true,
+                        Secure = true,
+                        SameSite = SameSiteMode.Strict,
+                        Expires = DateTimeOffset.UtcNow.AddHours(1),
+                    };
+
+                    responseCookies.HttpContext?.Response.Cookies.Append("Token", RefreshToken, options);
 
                     var tokenHashado = hasher.HashToken(RefreshToken);
 
@@ -177,8 +188,6 @@ namespace Portfolio.Classes
                         log.Message = "RefreshToken não encontrado";
                         return log;
                     }
-
-                    log.Dados.Add(RefreshTokenBanco);
                 }
 
                 var tokenAcesso = token.GenerateToken(pessoa.Name);
@@ -186,7 +195,6 @@ namespace Portfolio.Classes
                 log.success = true;
                 log.Message = "Logado com sucesso";
                 log.Dados.Insert(0, tokenAcesso);
-
 
                 return log;
             }
@@ -221,6 +229,52 @@ namespace Portfolio.Classes
             {
                 log.success = false;
                 log.Message = $"Erro inesperado: {ex.Message}";
+                return log;
+            }
+        }
+
+        public async Task<TabelaProblem<string>> Disconnect(TokenDto Token)
+        {
+            var log = new TabelaProblem<string>
+            {
+                Dados = null
+            };
+
+            try
+            {
+
+                if (string.IsNullOrWhiteSpace(Token.IdToken))
+                {
+                    log.success = false;
+                    log.Message = "Precisa de um Token";
+                }
+
+                var tokenLimpo = Uri.UnescapeDataString(Token.IdToken);
+                var tokenHashado = hasher.HashToken(tokenLimpo);
+
+                var Deletado =  await Context.TokenValidation
+                                    .Where(p => p.RefreshToken == tokenHashado)
+                                    .ExecuteDeleteAsync().ConfigureAwait(false);
+
+                if (Deletado <= 0)
+                {
+                    log.success = false;
+                    log.Message = "Nenhum Token encontrado";
+
+                    return log;
+                }
+
+                log.success = true;
+                log.Message = "Token encontrado";
+                log.Dados = null;
+
+                return log;
+            }
+            catch(Exception ex)
+            {
+                log.success = false;
+                log.Message = $"Erro inesperado: {ex.Message}";
+
                 return log;
             }
         }

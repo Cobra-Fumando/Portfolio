@@ -73,6 +73,8 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
+builder.Services.AddHttpContextAccessor();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

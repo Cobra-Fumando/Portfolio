@@ -137,3 +137,4 @@ C:\Users\Thiago\source\repos\Portfolio\Portfolio\bin\Debug\net9.0\Google.Apis.Co
 C:\Users\Thiago\source\repos\Portfolio\Portfolio\bin\Debug\net9.0\Newtonsoft.Json.dll
 C:\Users\Thiago\source\repos\Portfolio\Portfolio\bin\Debug\net9.0\System.Management.dll
 C:\Users\Thiago\source\repos\Portfolio\Portfolio\bin\Debug\net9.0\runtimes\win\lib\net7.0\System.Management.dll
+C:\Users\Thiago\source\repos\Portfolio\Portfolio\obj\Debug\net9.0\Portfolio.sourcelink.json
