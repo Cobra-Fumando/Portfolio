@@ -121,16 +121,12 @@ namespace Portfolio.Controllers
         [Authorize]
         [EnableRateLimiting("Fixed")]
         [HttpDelete("Desconectar")]
-        public async Task<IActionResult> Disconnect([FromBody] TokenDto Token)
+        public async Task<IActionResult> Disconnect()
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(Token.IdToken))
-                {
-                    return BadRequest(new {Message = "Precisa do Token"});
-                }
-
-                var resposta = await users.Disconnect(Token).ConfigureAwait(false);
+              
+                var resposta = await users.Disconnect().ConfigureAwait(false);
 
                 if (!resposta.success)
                 {

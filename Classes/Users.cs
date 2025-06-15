@@ -233,7 +233,7 @@ namespace Portfolio.Classes
             }
         }
 
-        public async Task<TabelaProblem<string>> Disconnect(TokenDto Token)
+        public async Task<TabelaProblem<string>> Disconnect()
         {
             var log = new TabelaProblem<string>
             {
@@ -242,14 +242,31 @@ namespace Portfolio.Classes
 
             try
             {
-
-                if (string.IsNullOrWhiteSpace(Token.IdToken))
+                if(responseCookies.HttpContext == null)
                 {
                     log.success = false;
-                    log.Message = "Precisa de um Token";
+                    log.Message = "Contexto HTTP não disponivel";
+                    return log;
                 }
 
-                var tokenLimpo = Uri.UnescapeDataString(Token.IdToken);
+                string? tokenRequest = responseCookies.HttpContext?.Request.Cookies["Token"]; //Pega o Token armazenado no cookie
+
+                responseCookies.HttpContext?.Response.Cookies.Append("Token", "", new CookieOptions
+                {
+                    Secure = true,
+                    HttpOnly = true,
+                    SameSite = SameSiteMode.Strict,
+                    Expires = DateTimeOffset.UtcNow.AddDays(-1)
+                }); //Tira o cookie
+
+                if (string.IsNullOrWhiteSpace(tokenRequest))
+                {
+                    log.success = false;
+                    log.Message = "Nenhum token encontrado";
+                    return log;
+                }
+
+                var tokenLimpo = Uri.UnescapeDataString(tokenRequest);
                 var tokenHashado = hasher.HashToken(tokenLimpo);
 
                 var Deletado =  await Context.TokenValidation
@@ -265,7 +282,7 @@ namespace Portfolio.Classes
                 }
 
                 log.success = true;
-                log.Message = "Token encontrado";
+                log.Message = "Token Removido com sucesso";
                 log.Dados = null;
 
                 return log;

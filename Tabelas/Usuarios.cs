@@ -17,5 +17,8 @@ namespace Portfolio.Tabelas
 
         [Required(ErrorMessage = "Senha é obrigatória")]
         public required string Password { get; set; }
+
+        [Required(ErrorMessage = "Role é obrigatória")]
+        public string Role { get; set; } = "Usuarios";
     }
 }
