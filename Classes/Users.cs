@@ -5,6 +5,7 @@ using Portfolio.Config;
 using Portfolio.Interfaces;
 using Portfolio.Tabelas;
 using Portfolio.Dto;
+using System.Security.Claims;
 
 namespace Portfolio.Classes
 {
@@ -81,25 +82,29 @@ namespace Portfolio.Classes
                 var Hash = hasher.Hashar(usuarios.Password);
 
                 string role = "Usuarios";
+                var user = responseCookies.HttpContext?.User;
 
-                if (usuarios.Role == "admin")
+                if (user != null)
                 {
-                    if (string.IsNullOrWhiteSpace(Permission))
+                    if (user.FindFirst(ClaimTypes.Role)?.Value == "admin")
                     {
-                        Permission = "Usuarios";
-                    }
+                        if (string.IsNullOrWhiteSpace(Permission))
+                        {
+                            Permission = "Usuarios";
+                        }
 
-                    if (Permission == "admin" || Permission == "Usuarios")
-                    {
-                        role = Permission;
-                    }
-                    else
-                    {
-                        log.success = false;
-                        log.Message = "Role invalida";
-                        return log;
-                    }
+                        if (Permission == "admin" || Permission == "Usuarios")
+                        {
+                            role = Permission;
+                        }
+                        else
+                        {
+                            log.success = false;
+                            log.Message = "Role invalida";
+                            return log;
+                        }
 
+                    }
                 }
 
                 var Novo = new Usuarios

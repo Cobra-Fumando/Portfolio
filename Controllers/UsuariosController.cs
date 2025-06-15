@@ -21,9 +21,10 @@ namespace Portfolio.Controllers
             this.logger = logger;
         }
 
+        [Authorize(Roles = "Administrador,Usuarios")]
         [EnableRateLimiting("Fixed")]
         [HttpPost("Adicionar")]
-        public async Task<IActionResult> add([FromBody] Usuarios usuarios)
+        public async Task<IActionResult> add([FromBody] Usuarios usuarios, string? Permission)
         {
             try
             {
@@ -32,7 +33,7 @@ namespace Portfolio.Controllers
                     return BadRequest(ModelState);
                 }
 
-                var Adicionar = await users.add(usuarios, null).ConfigureAwait(false);
+                var Adicionar = await users.add(usuarios, Permission).ConfigureAwait(false);
 
                 if (!Adicionar.success)
                 {
