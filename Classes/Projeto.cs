@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Portfolio.Conexao;
 using Portfolio.Dto;
 using Portfolio.Interfaces;
@@ -11,10 +12,12 @@ namespace Portfolio.Classes
     {
         private readonly ILogger<Projeto> logger;
         private readonly AppDbContext context;
-        public Projeto(ILogger<Projeto> logger, AppDbContext context)
+        private readonly IMemoryCache cache;
+        public Projeto(ILogger<Projeto> logger, AppDbContext context, IMemoryCache cache)
         {
             this.logger = logger;
             this.context = context;
+            this.cache = cache;
         }
 
         public async Task<TabelaProblem<TabelaDto>> add(TabelaPrincipal tabela)
@@ -23,7 +26,7 @@ namespace Portfolio.Classes
 
             try
             {
-                if(tabela == null)
+                if (tabela == null)
                 {
                     log.success = false;
                     log.Message = "Preencha a tabela";
@@ -74,30 +77,39 @@ namespace Portfolio.Classes
 
             try
             {
-                var resultado = await context.Projeto.AsNoTracking()
-                                .Skip((pagina - 1) * tamanho)
-                                .Take(tamanho)
-                                .Select(p => new TabelaDto
-                                {
-                                    Description = p.Descricao,
-                                    Urls = p.Urls,
-                                    Image = p.Image,
-                                    Titulo = p.Titulo,
-                                })
-                                .ToListAsync().ConfigureAwait(false);
-
-                if (!resultado.Any())
+                if (!cache.TryGetValue(pagina, out List<TabelaDto>? resultado))
                 {
-                    log.success = false;
-                    log.Message = "Nenhum Projeto encontrado";
-                    return log;
+                    resultado = await context.Projeto.AsNoTracking()
+                                    .Skip((pagina - 1) * tamanho)
+                                    .Take(tamanho)
+                                    .Select(p => new TabelaDto
+                                    {
+                                        Description = p.Descricao,
+                                        Urls = p.Urls,
+                                        Image = p.Image,
+                                        Titulo = p.Titulo,
+                                    })
+                                    .ToListAsync().ConfigureAwait(false);
+
+                    if (!resultado.Any())
+                    {
+                        log.success = false;
+                        log.Message = "Nenhum Projeto encontrado";
+                        return log;
+                    }
+
+                    cache.Set(pagina, resultado, new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpiration = DateTimeOffset.Now.AddMinutes(1)
+                    });
                 }
 
-                log.Message = "Projeto encontrado";
+                log.Message = "Projetos encontrado";
                 log.Dados = resultado;
 
                 return log;
             }
+
             catch (Exception ex)
             {
                 log.success = false;

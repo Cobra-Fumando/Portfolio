@@ -30,6 +30,13 @@ namespace Portfolio.Classes
 
             try
             {
+                if (string.IsNullOrWhiteSpace(Email))
+                {
+                    log.success = false;
+                    log.Message = "Email está vazio";
+                    return log;
+                }
+
                 var Emailvalido = new ValidacaoEmail();
                 bool Certo = Emailvalido.EmailValido(Email);
 
@@ -38,20 +45,6 @@ namespace Portfolio.Classes
                     log.success = false;
                     log.Message = "Email Invalido";
                     return log;
-                }
-
-                var token = HttpContextAccessor.HttpContext?.Request.Cookies["Token"];
-
-                if (token == null)
-                {
-                    log.success = false;
-                    log.Message = "Nenhum Token encontrado";
-                }
-
-                if (string.IsNullOrWhiteSpace(Email))
-                {
-                    log.success = false;
-                    log.Message = "Email não está no formato certo";
                 }
 
                 var Deleta = await Context.Usuarios.Where(p => p.Email == Email)
@@ -95,7 +88,7 @@ namespace Portfolio.Classes
 
             try
             {
-                var SenhaHash = hasher.Hashar(Senha);
+                string? SenhaHash = hasher.Hashar(Senha);
 
                 var Pessoa = await Context.Usuarios.Where(p => p.Email == Email && p.Password == SenhaHash && p.Role == "Admin")
                                     .FirstOrDefaultAsync().ConfigureAwait(false); //Procura a pessoa com descrição especifica
@@ -107,10 +100,11 @@ namespace Portfolio.Classes
                     return log;
                 }
 
-                var tokenAdm = token.GenerateTokenAdmin(Pessoa.Name); //Gera o Token admin
+                string? tokenAdm = token.GenerateTokenAdmin(Pessoa.Name); //Gera o Token admin
 
                 log.success = true;
                 log.Message = "Usuario logado com sucesso";
+                log.Dados = tokenAdm;
                 return log;
             }catch (Exception ex)
             {
