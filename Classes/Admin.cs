@@ -12,12 +12,14 @@ namespace Portfolio.Classes
         private readonly AppDbContext Context;
         private readonly IHttpContextAccessor HttpContextAccessor;
         private readonly Token token;
-        public Admin(ILogger<Admin> logger, AppDbContext context, IHttpContextAccessor httpContextAccessor, Token token) 
+        private readonly Hash hasher;
+        public Admin(ILogger<Admin> logger, AppDbContext context, IHttpContextAccessor httpContextAccessor, Token token, Hash hash) 
         {
             Context = context;
             this.logger = logger;
             this.HttpContextAccessor = httpContextAccessor;
             this.token = token;
+            hasher = hash;
         }
         public async Task<TabelaProblem<string>> DeletarUsuarios(string Email)
         {
@@ -93,7 +95,9 @@ namespace Portfolio.Classes
 
             try
             {
-                var Pessoa = await Context.Usuarios.Where(p => p.Email == Email && p.Password == Senha && p.Role == "Admin")
+                var SenhaHash = hasher.Hashar(Senha);
+
+                var Pessoa = await Context.Usuarios.Where(p => p.Email == Email && p.Password == SenhaHash && p.Role == "Admin")
                                     .FirstOrDefaultAsync().ConfigureAwait(false); //Procura a pessoa com descrição especifica
 
                 if (Pessoa == null)

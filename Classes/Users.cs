@@ -45,7 +45,7 @@ namespace Portfolio.Classes
             return log;
         }
 
-        public async Task<TabelaProblem<UsuariosDto>> add(Usuarios usuarios)
+        public async Task<TabelaProblem<UsuariosDto>> add(Usuarios usuarios, string? Permission)
         {
             var log = new TabelaProblem<UsuariosDto>();
             var validar = new ValidacaoEmail();
@@ -78,13 +78,36 @@ namespace Portfolio.Classes
                     return log;
                 }
 
-                var Hash = hasher.Hashar(usuarios, usuarios.Password);
+                var Hash = hasher.Hashar(usuarios.Password);
+
+                string role = "Usuarios";
+
+                if (usuarios.Role == "admin")
+                {
+                    if (string.IsNullOrWhiteSpace(Permission))
+                    {
+                        Permission = "Usuarios";
+                    }
+
+                    if (Permission == "admin" || Permission == "Usuarios")
+                    {
+                        role = Permission;
+                    }
+                    else
+                    {
+                        log.success = false;
+                        log.Message = "Role invalida";
+                        return log;
+                    }
+
+                }
 
                 var Novo = new Usuarios
                 {
                     Email = usuarios.Email,
                     Password = Hash,
                     Name = usuarios.Name,
+                    Role = role
                 };
 
                 await Context.AddAsync(Novo).ConfigureAwait(false);
@@ -138,7 +161,7 @@ namespace Portfolio.Classes
                     return log;
                 }
 
-                var verificado = hasher.Verificar(pessoa, Senha, pessoa.Password);
+                var verificado = hasher.Verificar(Senha, pessoa.Password);
 
                 if (!verificado)
                 {

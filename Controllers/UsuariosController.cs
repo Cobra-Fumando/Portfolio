@@ -32,7 +32,7 @@ namespace Portfolio.Controllers
                     return BadRequest(ModelState);
                 }
 
-                var Adicionar = await users.add(usuarios).ConfigureAwait(false);
+                var Adicionar = await users.add(usuarios, null).ConfigureAwait(false);
 
                 if (!Adicionar.success)
                 {

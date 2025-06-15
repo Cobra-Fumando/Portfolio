@@ -15,14 +15,14 @@ namespace Portfolio.Config
             this.hasher = hasher;
         }
 
-        public string Hashar(Usuarios usuarios, string Senha)
+        public string Hashar(string Senha)
         {
-            return hasher.HashPassword(usuarios, Senha); //hasha a senha do usuario
+            return hasher.HashPassword(null, Senha); //hasha a senha do usuario
         }
 
-        public bool Verificar(Usuarios usuarios, string Senha, string SenhaHash)
+        public bool Verificar(string Senha, string SenhaHash)
         {
-            var resultado = hasher.VerifyHashedPassword(usuarios, SenhaHash, Senha); //compara a senha com o hash
+            var resultado = hasher.VerifyHashedPassword(null, SenhaHash, Senha); //compara a senha com o hash
             return resultado == PasswordVerificationResult.Success; //verifica se foi sucesso
         }
 
