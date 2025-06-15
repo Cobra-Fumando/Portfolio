@@ -36,7 +36,7 @@ namespace Portfolio.Config
             var claims = new[]
             {
                 new Claim(ClaimTypes.Name, Nome),
-                new Claim(ClaimTypes.Role, "Usuario"),
+                new Claim(ClaimTypes.Role, "Usuarios"),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
@@ -70,7 +70,7 @@ namespace Portfolio.Config
             var claims = new[]
             {
                 new Claim(ClaimTypes.Name, Nome),
-                new Claim(ClaimTypes.Role, "Admin"),
+                new Claim(ClaimTypes.Role, "admin"),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 

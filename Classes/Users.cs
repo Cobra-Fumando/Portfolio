@@ -86,24 +86,22 @@ namespace Portfolio.Classes
 
                 if (user != null)
                 {
-                    if (user.FindFirst(ClaimTypes.Role)?.Value == "admin")
+                    if (string.Equals(user.FindFirst(ClaimTypes.Role)?.Value, "admin", StringComparison.OrdinalIgnoreCase))
                     {
                         if (string.IsNullOrWhiteSpace(Permission))
                         {
                             Permission = "Usuarios";
                         }
 
-                        if (Permission == "admin" || Permission == "Usuarios")
-                        {
-                            role = Permission;
-                        }
-                        else
+                        var rolesValidos = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "admin", "Usuarios" };
+                        if (!rolesValidos.Contains(Permission))
                         {
                             log.success = false;
-                            log.Message = "Role invalida";
+                            log.Message = "Role inválida";
                             return log;
                         }
 
+                        role = Permission;
                     }
                 }
 
