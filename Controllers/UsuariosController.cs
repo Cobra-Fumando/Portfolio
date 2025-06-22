@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Cryptography;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Portfolio.Config;
 using Portfolio.Dto;
 using Portfolio.Interfaces;
 using Portfolio.Tabelas;
@@ -15,10 +17,12 @@ namespace Portfolio.Controllers
     {
         private readonly IUsers users;
         private readonly ILogger<UsuariosController> logger;
-        public UsuariosController(IUsers users, ILogger<UsuariosController> logger)
+        private readonly EmailSmtp emailSmtp;
+        public UsuariosController(IUsers users, ILogger<UsuariosController> logger, EmailSmtp emailSmtp)
         {
             this.users = users;
             this.logger = logger;
+            this.emailSmtp = emailSmtp;
         }
 
         [Authorize(Roles = "Administrador,Usuarios")]
@@ -138,6 +142,31 @@ namespace Portfolio.Controllers
 
             }
             catch (Exception ex)
+            {
+                return StatusCode(500, $"Erro inesperado: {ex.Message}");
+            }
+        }
+
+        [HttpPost("Verificar")]
+        public IActionResult Message()
+        {
+
+            int[] Codigo = new int[4];
+
+            for(int i = 0; i < Codigo.Length; i++)
+            {
+                Codigo[i] = RandomNumberGenerator.GetInt32(10);
+            }
+
+            var codigo = string.Join("",Codigo);
+
+            try
+            {
+                emailSmtp.CodigoSend();
+
+                return Ok();
+
+            }catch (Exception ex)
             {
                 return StatusCode(500, $"Erro inesperado: {ex.Message}");
             }

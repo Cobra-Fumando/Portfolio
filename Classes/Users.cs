@@ -6,6 +6,7 @@ using Portfolio.Interfaces;
 using Portfolio.Tabelas;
 using Portfolio.Dto;
 using System.Security.Claims;
+using System.Security.Cryptography;
 
 namespace Portfolio.Classes
 {
@@ -16,102 +17,118 @@ namespace Portfolio.Classes
         private readonly Token token;
         private readonly Hash hasher;
         private readonly IHttpContextAccessor responseCookies;
-        public Users(ILogger<Users> logger, AppDbContext context, Hash hasher, Token token, IHttpContextAccessor responseCookies)
+        private readonly EmailSmtp emailSmtp;
+        public Users(ILogger<Users> logger, AppDbContext context, Hash hasher, Token token, IHttpContextAccessor responseCookies, EmailSmtp email)
         {
             this.logger = logger;
             this.Context = context;
             this.hasher = hasher;
             this.token = token;
             this.responseCookies = responseCookies;
+            emailSmtp = email;
         }
 
         private async Task<TabelaProblem<bool>> ValidarToken(string Email)
         {
             var log = new TabelaProblem<bool>();
 
-            var TokenUser = await Context.TokenValidation.AsNoTracking()
-                            .FirstOrDefaultAsync(p => p.Email == Email).ConfigureAwait(false);
+            try
+            {
+                var TokenUser = await Context.TokenValidation.AsNoTracking()
+                                .FirstOrDefaultAsync(p => p.Email == Email).ConfigureAwait(false);
 
-            if (TokenUser == null)
+                if (TokenUser == null)
+                {
+                    log.success = false;
+                    log.Message = "Token Não encontrado";
+                    log.Dados = false;
+                    return log;
+                }
+
+                log.success = true;
+                log.Message = "Token Encontrado";
+                log.Dados = TokenUser.DataExpiracao < DateTime.UtcNow;
+                return log;
+            }
+            catch (Exception ex)
             {
                 log.success = false;
-                log.Message = "Token Não encontrado";
-                log.Dados = false;
+                log.Message = $"Erro inesperado: {ex.Message}";
                 return log;
             }
 
-            log.success = true;
-            log.Message = "Token Encontrado";
-            log.Dados = TokenUser.DataExpiracao < DateTime.UtcNow;
-            return log;
         }
 
         public async Task<TabelaProblem<UsuariosDto>> add(Usuarios usuarios, string? Permission)
         {
-            var log = new TabelaProblem<UsuariosDto>();
+            var log = new TabelaProblem<UsuariosDto>
+            {
+                Dados = null
+            };
+
             var validar = new ValidacaoEmail();
+
+            if (usuarios == null)
+            {
+                log.success = false;
+                log.Message = "Preencha usuarios";
+                return log;
+            }
+
+            var valido = validar.EmailValido(usuarios.Email);
+
+            if (!valido)
+            {
+                log.success = false;
+                log.Message = "Email invalido";
+                return log;
+            }
+
+            var existe = await Context.Usuarios.AnyAsync(p => p.Email == usuarios.Email).ConfigureAwait(false);
+
+            if (existe)
+            {
+                log.success = false;
+                log.Message = "Esse Email já existe";
+                return log;
+            }
+
+            var Hash = hasher.Hashar(usuarios.Password);
+
+            string role = "Usuarios";
+            var user = responseCookies.HttpContext?.User;
+
+            if (user != null)
+            {
+                if (string.Equals(user.FindFirst(ClaimTypes.Role)?.Value, "admin", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (string.IsNullOrWhiteSpace(Permission))
+                    {
+                        Permission = "Usuarios";
+                    }
+
+                    var rolesValidos = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "admin", "Usuarios" };
+                    if (!rolesValidos.Contains(Permission))
+                    {
+                        log.success = false;
+                        log.Message = "Role inválida";
+                        return log;
+                    }
+
+                    role = Permission;
+                }
+            }
+
+            var Novo = new Usuarios
+            {
+                Email = usuarios.Email,
+                Password = Hash,
+                Name = usuarios.Name,
+                Role = role
+            };
 
             try
             {
-
-                if (usuarios == null)
-                {
-                    log.success = false;
-                    log.Message = "Preencha usuarios";
-                    return log;
-                }
-
-                var valido = validar.EmailValido(usuarios.Email);
-
-                if (!valido)
-                {
-                    log.success = false;
-                    log.Message = "Email invalido";
-                    return log;
-                }
-
-                var existe = await Context.Usuarios.AnyAsync(p => p.Email == usuarios.Email).ConfigureAwait(false);
-
-                if (existe)
-                {
-                    log.success = false;
-                    log.Message = "Esse Email já existe";
-                    return log;
-                }
-
-                var Hash = hasher.Hashar(usuarios.Password);
-
-                string role = "Usuarios";
-                var user = responseCookies.HttpContext?.User;
-
-                if (user != null)
-                {
-                    if (string.Equals(user.FindFirst(ClaimTypes.Role)?.Value, "admin", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (string.IsNullOrWhiteSpace(Permission))
-                        {
-                            Permission = "Usuarios";
-                        }
-
-                        var rolesValidos = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "admin", "Usuarios" };
-                        if (!rolesValidos.Contains(Permission))
-                        {
-                            log.success = false;
-                            log.Message = "Role inválida";
-                            return log;
-                        }
-
-                        role = Permission;
-                    }
-                }
-
-                var Novo = new Usuarios
-                {
-                    Email = usuarios.Email,
-                    Password = Hash,
-                    Name = usuarios.Name,
-                    Role = role
-                };
 
                 await Context.AddAsync(Novo).ConfigureAwait(false);
                 await Context.SaveChangesAsync().ConfigureAwait(false);
@@ -268,7 +285,7 @@ namespace Portfolio.Classes
 
             try
             {
-                if(responseCookies.HttpContext == null)
+                if (responseCookies.HttpContext == null)
                 {
                     log.success = false;
                     log.Message = "Contexto HTTP não disponivel";
@@ -277,13 +294,7 @@ namespace Portfolio.Classes
 
                 string? tokenRequest = responseCookies.HttpContext?.Request.Cookies["Token"]; //Pega o Token armazenado no cookie
 
-                responseCookies.HttpContext?.Response.Cookies.Append("Token", "", new CookieOptions
-                {
-                    Secure = true,
-                    HttpOnly = true,
-                    SameSite = SameSiteMode.Strict,
-                    Expires = DateTimeOffset.UtcNow.AddDays(-1)
-                }); //Tira o cookie
+                responseCookies.HttpContext?.Response.Cookies.Delete("Token");
 
                 if (string.IsNullOrWhiteSpace(tokenRequest))
                 {
@@ -295,7 +306,7 @@ namespace Portfolio.Classes
                 var tokenLimpo = Uri.UnescapeDataString(tokenRequest);
                 var tokenHashado = hasher.HashToken(tokenLimpo);
 
-                var Deletado =  await Context.TokenValidation
+                var Deletado = await Context.TokenValidation
                                     .Where(p => p.RefreshToken == tokenHashado)
                                     .ExecuteDeleteAsync().ConfigureAwait(false);
 
@@ -313,7 +324,7 @@ namespace Portfolio.Classes
 
                 return log;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 log.success = false;
                 log.Message = $"Erro inesperado: {ex.Message}";

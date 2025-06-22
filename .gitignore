@@ -2,11 +2,29 @@
 .vs/
 *.user
 *.suo
+*.userosscache
+*.sln.docstates
 
-# Build output
+# Build results
 bin/
 obj/
 
-# Outros
-*.log
+# ASP.NET
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Rider (JetBrains IDE)
+.idea/
+
+# Backup & temp files
+*.bak
 *.tmp
+*.log
+*.vsidx
+*.dbmdl
+
+# Others
+*.swp
+*.DS_Store
+Thumbs.db

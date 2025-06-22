@@ -11,5 +11,6 @@ namespace Portfolio.Conexao
         public DbSet<TabelaPrincipal> Projeto {  get; set; }
         public DbSet<Usuarios> Usuarios { get; set; }
         public DbSet<TokenValidation> TokenValidation { get; set; }
+        public DbSet<Verificar> Verificar { get; set; }
     }
 }

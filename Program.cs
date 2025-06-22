@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Portfolio.Background;
 using Portfolio.Classes;
 using Portfolio.Conexao;
 using Portfolio.Config;
@@ -27,7 +28,10 @@ builder.Services.AddScoped<IAdmin, Admin>();
 builder.Services.AddScoped<Token>();
 builder.Services.AddScoped<IPasswordHasher<Usuarios>, PasswordHasher<Usuarios>>();
 builder.Services.AddTransient<Hash>();
+builder.Services.AddScoped<EmailSmtp>();
 builder.Services.AddMemoryCache();
+
+builder.Services.AddHostedService<Verificacao>();
 
 var key = Encoding.UTF8.GetBytes(builder.Configuration["Token:Key"]);
 var keyAdmin = Encoding.UTF8.GetBytes(builder.Configuration["TokenAdmin:Key"]);
