@@ -25,7 +25,7 @@ namespace Portfolio.Controllers
         [Authorize]
         [EnableRateLimiting("Fixed")]
         [HttpPost("Adicionar")]
-        public async Task<IActionResult> Adicionar(TabelaPrincipal tabela)
+        public async Task<IActionResult> Adicionar([FromForm] TabelaPrincipal tabela, [FromForm] IFormFile imagens)
         {
             try
             {
@@ -34,16 +34,16 @@ namespace Portfolio.Controllers
                     return BadRequest(ModelState);
                 }
 
-                var resultado = await projeto.add(tabela).ConfigureAwait(false);
+                var resultado = await projeto.add(tabela, imagens).ConfigureAwait(false);
 
                 if (!resultado.success)
                 {
-                    return Conflict(new {Mensagem = resultado.Message });
+                    return Conflict(new { Mensagem = resultado.Message });
                 }
 
-                return Ok(new {Mensagem = resultado.Message, Tabela = resultado.Dados});
+                return Ok(new { Mensagem = resultado.Message, Tabela = resultado.Dados });
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 logger.LogError($"Erro inesperado: {ex.Message}");
                 return StatusCode(500, $"Erro inesperado: {ex.Message}");
@@ -65,15 +65,36 @@ namespace Portfolio.Controllers
 
                 if (!resultado.success)
                 {
-                    return BadRequest(new {Mensagem = resultado.Message});
+                    return BadRequest(new { Mensagem = resultado.Message });
                 }
 
-                return Ok(new { Mensagem = resultado.Message, Projeto = resultado.Dados});
-            }catch(Exception ex)
+                return Ok(new { Mensagem = resultado.Message, Projeto = resultado.Dados });
+            }
+            catch (Exception ex)
             {
                 logger.LogError($"Erro inesperado: {ex.Message}");
                 return StatusCode(500, $"Erro inesperado: {ex.Message}");
             }
+        }
+
+        [EnableRateLimiting("Fixed")]
+        [HttpGet("ObterImagem/{Imagem}")]
+        public async Task<IActionResult> ObterImage(string Imagem)
+        {
+            var local = Path.Combine(Directory.GetCurrentDirectory(), "Imagem");
+
+            var resultado = await projeto.ObterImagem(Imagem).ConfigureAwait(false);
+
+            if (!resultado.success) return BadRequest(new { Mensagem = resultado.Message });
+
+            var extensao = Path.GetExtension(Imagem);
+
+            if (resultado.Dados == null || resultado.Message == null)
+            {
+                return NotFound(new { Mensagem = "Nenhuma imagem encontrada" });
+            }
+
+            return File(resultado.Dados, resultado.Message, $"{Guid.NewGuid()}{extensao}");
         }
     }
 }

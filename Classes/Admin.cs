@@ -13,13 +13,21 @@ namespace Portfolio.Classes
         private readonly IHttpContextAccessor HttpContextAccessor;
         private readonly Token token;
         private readonly Hash hasher;
-        public Admin(ILogger<Admin> logger, AppDbContext context, IHttpContextAccessor httpContextAccessor, Token token, Hash hash) 
+        private readonly ObterIp obterIp;
+        public Admin(ILogger<Admin> logger, 
+            AppDbContext context, 
+            IHttpContextAccessor httpContextAccessor, 
+            Token token, 
+            Hash hash, 
+            ObterIp obterIp
+            )
         {
             Context = context;
             this.logger = logger;
             this.HttpContextAccessor = httpContextAccessor;
             this.token = token;
             hasher = hash;
+            this.obterIp = obterIp;
         }
         public async Task<TabelaProblem<string>> DeletarUsuarios(string Email)
         {
@@ -106,12 +114,57 @@ namespace Portfolio.Classes
                 log.Message = "Usuario logado com sucesso";
                 log.Dados = tokenAdm;
                 return log;
-            }catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 log.success = false;
                 log.Message = $"Erro inesperado: {ex.Message}";
                 return log;
             }
+        }
+        public async Task<TabelaProblem<string>> Ban(Banimento banimento)
+        {
+            var log = new TabelaProblem<string>
+            {
+                Dados = null
+            };
+
+            if (banimento == null)
+            {
+                log.success = false;
+                log.Message = "Modelo invalido";
+                return log;
+            }
+
+            try
+            {
+                bool existe = await Context.Banimentos.AsNoTracking()
+                            .AnyAsync(p => p.Ip == banimento.Ip)
+                            .ConfigureAwait(false);
+
+                if (existe)
+                {
+                    log.success = false;
+                    log.Message = "Esse ip já está banido";
+                    return log;
+                }
+
+                await Context.Banimentos.AddAsync(banimento).ConfigureAwait(false);
+                await Context.SaveChangesAsync().ConfigureAwait(false);
+
+                log.success = true;
+                log.Message = "Banido com sucesso";
+                return log;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"Ocorreu um erro: {ex.Message}");
+
+                log.success = false;
+                log.Message = $"Erro inesperado: {ex.Message}";
+                return log;
+            }
+
         }
     }
 }

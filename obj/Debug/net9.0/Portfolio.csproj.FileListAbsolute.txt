@@ -142,4 +142,7 @@ C:\Users\Thiago\source\repos\Portfolio\Portfolio\obj\Debug\net9.0\rpswa.dswa.cac
 C:\Users\Thiago\source\repos\Portfolio\Portfolio\obj\Debug\net9.0\rjimswa.dswa.cache.json
 C:\Users\Thiago\source\repos\Portfolio\Portfolio\obj\Debug\net9.0\rjsmrazor.dswa.cache.json
 C:\Users\Thiago\source\repos\Portfolio\Portfolio\obj\Debug\net9.0\rjsmcshtml.dswa.cache.json
+C:\Users\Thiago\source\repos\Portfolio\Portfolio\bin\Debug\net9.0\BouncyCastle.Cryptography.dll
+C:\Users\Thiago\source\repos\Portfolio\Portfolio\bin\Debug\net9.0\MailKit.dll
+C:\Users\Thiago\source\repos\Portfolio\Portfolio\bin\Debug\net9.0\MimeKit.dll
 C:\Users\Thiago\source\repos\Portfolio\Portfolio\obj\Debug\net9.0\staticwebassets.upToDateCheck.txt

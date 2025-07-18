@@ -1,5 +1,8 @@
 ﻿using System.Net;
 using System.Net.Mail;
+using MailKit.Security;
+using MimeKit;
+using Portfolio.Tabelas;
 
 namespace Portfolio.Config
 {
@@ -10,78 +13,108 @@ namespace Portfolio.Config
         {
             this.logger = logger;
         }
-        public void Enviar(string RemetenteEmail, string DestinatarioEmail, string Senha, string DestinatarioName, string Mensagem)
+        public void Enviar(string RemetenteEmail, string DestinatarioEmail, string Senha, string DestinatarioName, string Mensagem, string assunto)
         {
             if (string.IsNullOrWhiteSpace(RemetenteEmail) ||
                 string.IsNullOrWhiteSpace(DestinatarioEmail) ||
                 string.IsNullOrWhiteSpace(Senha) ||
-                string.IsNullOrWhiteSpace(DestinatarioName)||
+                string.IsNullOrWhiteSpace(DestinatarioName) ||
                 string.IsNullOrWhiteSpace(Mensagem))
             {
                 logger.LogWarning("Está faltando informações");
                 return;
             }
 
-            MailAddress Remetente = new MailAddress(RemetenteEmail, DestinatarioName);
-            MailAddress destinatario = new MailAddress(DestinatarioEmail);
+            //-----------------------------------------------------------//
+            //Mensagem configuração
 
-            MailMessage message = new MailMessage();
+            var mensagem = new MimeMessage();
+            mensagem.From.Add(new MailboxAddress("Ronaldo", RemetenteEmail));
+            mensagem.To.Add(new MailboxAddress(DestinatarioName, DestinatarioEmail));
 
-            message.From = Remetente;
-            message.To.Add(destinatario);
-            message.Subject = Mensagem;
-            message.IsBodyHtml = false;
+            mensagem.Subject = assunto;
 
-            var stmp = new SmtpClient("smtp.gmail.com", 587) {
-                Credentials = new NetworkCredential(RemetenteEmail, Senha),
-                EnableSsl = true
+            mensagem.Body = new TextPart("html")
+            {
+                Text = $"<h1>Olá!</h1><p> {assunto} <strong> {mensagem} </strong>.</p>"
             };
+
+            //-----------------------------------------------------------//
+            //enviar Mensagem
 
             try
             {
-                stmp.Send(message);
+                using var smtp = new MailKit.Net.Smtp.SmtpClient();
+                smtp.Connect("smtp.gmail.com", 587, SecureSocketOptions.StartTls);
+                smtp.Authenticate(RemetenteEmail, Senha);
+                smtp.Send(mensagem);
+                smtp.Disconnect(true);
+
                 logger.LogInformation("Mensagem enviada com sucesso");
             }
             catch (Exception ex)
-            {
+            { 
                 logger.LogError($"Erro inesperado: {ex.Message}");
             }
         }
 
-        public void CodigoSend(string RemetenteEmail, string DestinatarioEmail, string Senha, string DestinatarioName, string Codigo)
+        public TabelaProblem<string> CodigoSend(string RemetenteEmail, string DestinatarioEmail, string Senha, string DestinatarioName, string Codigo)
         {
+            var log = new TabelaProblem<string>
+            {
+                Dados = null
+            };
+
             if (string.IsNullOrWhiteSpace(RemetenteEmail) ||
                 string.IsNullOrWhiteSpace(DestinatarioEmail) ||
                 string.IsNullOrWhiteSpace(Senha) ||
                 string.IsNullOrWhiteSpace(DestinatarioName))
             {
                 logger.LogWarning("Está faltando informações");
-                return;
+                log.success = false;
+                log.Message = "Está faltando informações";
+
+                return log;
             }
 
-            MailAddress Remetente = new MailAddress(RemetenteEmail);
-            MailAddress destinatario = new MailAddress(DestinatarioEmail);
+            //-----------------------------------------------------------//
+            //Mensagem configuração
 
-            MailMessage message = new MailMessage();
+            var mensagem = new MimeMessage();
+            mensagem.From.Add(new MailboxAddress("Ronaldo", RemetenteEmail));
+            mensagem.To.Add(new MailboxAddress(DestinatarioName, DestinatarioEmail));
 
-            message.From = Remetente;
-            message.To.Add(destinatario);
-            message.Subject = $"Olá {DestinatarioName}, seu código de verificação é: {Codigo}";
-            message.IsBodyHtml = false;
+            mensagem.Subject = "Verificação 2 etapa";
 
-            var stmp = new SmtpClient("smtp.gmail.com", 587) {
-                Credentials = new NetworkCredential(RemetenteEmail, Senha),
-                EnableSsl = true
+            mensagem.Body = new TextPart("html")
+            {
+                Text = $"<h1>Olá!</h1><p>Este é um e-mail com seu codigo <strong> {Codigo} </strong>.</p>"
             };
+
+            //-----------------------------------------------------------//
+            //enviar Mensagem
 
             try
             {
-                stmp.Send(message);
+                using var smtp = new MailKit.Net.Smtp.SmtpClient();
+                smtp.Connect("smtp.gmail.com", 587, SecureSocketOptions.StartTls);
+                smtp.Authenticate(RemetenteEmail, Senha);
+                smtp.Send(mensagem);
+                smtp.Disconnect(true);
+
                 logger.LogInformation("Mensagem enviada com sucesso");
+
+                log.success = true;
+                log.Message = "Mensagem enviada com sucesso";
+                return log;
             }
             catch (Exception ex)
             {
                 logger.LogError($"Erro inesperado: {ex.Message}");
+
+                log.success = false;
+                log.Message = $"Erro inesperado: {ex.Message}";
+                return log;
             }
         }
     }

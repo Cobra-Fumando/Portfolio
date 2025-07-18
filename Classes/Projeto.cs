@@ -20,9 +20,39 @@ namespace Portfolio.Classes
             this.cache = cache;
         }
 
-        public async Task<TabelaProblem<TabelaDto>> add(TabelaPrincipal tabela)
+        public async Task<TabelaProblem<TabelaDto>> add(TabelaPrincipal tabela, IFormFile image)
         {
             var log = new TabelaProblem<TabelaDto>();
+
+            var local = Path.Combine(Directory.GetCurrentDirectory(), "Imagem");
+
+            if (image == null || image.Length == 0)
+            {
+                log.success = false;
+                log.Message = "Imagem não foi enviada";
+                log.Dados = null;
+
+                return log;
+            }
+
+            if (!Directory.Exists(local))
+            {
+                log.success = false;
+                log.Message = "Pasta não encontrada";
+                log.Dados = null;
+
+                return log;
+            }
+
+            var extensão = Path.GetExtension(image.FileName);
+            var NomeArquivo = $"{Guid.NewGuid()}{extensão}";
+
+            var CaminhoArquivo = Path.Combine(local, NomeArquivo);
+
+            using (var stream = new FileStream(CaminhoArquivo, FileMode.Create))
+            {
+                await image.CopyToAsync(stream).ConfigureAwait(false);
+            }
 
             try
             {
@@ -45,6 +75,8 @@ namespace Portfolio.Classes
                     return log;
                 }
 
+                tabela.Image = NomeArquivo;
+
                 await context.AddAsync(tabela).ConfigureAwait(false);
                 await context.SaveChangesAsync().ConfigureAwait(false);
 
@@ -52,7 +84,7 @@ namespace Portfolio.Classes
                 {
                     Description = tabela.Descricao,
                     Urls = tabela.Urls,
-                    Image = tabela.Image,
+                    Image = NomeArquivo,
                     Titulo = tabela.Titulo,
                 };
 
@@ -74,6 +106,22 @@ namespace Portfolio.Classes
         public async Task<TabelaProblem<List<TabelaDto>>> Todos(int pagina, int tamanho)
         {
             var log = new TabelaProblem<List<TabelaDto>>();
+
+            if(pagina < 1)
+            {
+                logger.LogWarning("Pagina não pode ser menor que 1");
+                logger.LogInformation("Mudando para 1");
+
+                pagina = 1;
+            }
+
+            if(tamanho < 1)
+            {
+                logger.LogWarning("Tamanho não pode ser menor que 1");
+                logger.LogInformation("Mudando para 1");
+
+                tamanho = 1;
+            }
 
             try
             {
@@ -100,7 +148,8 @@ namespace Portfolio.Classes
 
                     cache.Set(pagina, resultado, new MemoryCacheEntryOptions
                     {
-                        AbsoluteExpiration = DateTimeOffset.Now.AddMinutes(1)
+                        AbsoluteExpiration = DateTimeOffset.Now.AddMinutes(1),
+                        Priority = CacheItemPriority.Normal
                     });
                 }
 
@@ -112,8 +161,66 @@ namespace Portfolio.Classes
 
             catch (Exception ex)
             {
+                logger.LogError($"Erro inesperado: {ex.Message}");
                 log.success = false;
                 log.Message = $"Erro inesperado: {ex.Message}";
+                return log;
+            }
+        }
+
+        public async Task<TabelaProblem<byte[]>> ObterImagem(string Imagem)
+        {
+            var log = new TabelaProblem<byte[]>();
+
+            try
+            {
+
+                var projeto = await context.Projeto.AsNoTracking()
+                                .Where(p => p.Image == Imagem)
+                                .FirstOrDefaultAsync().ConfigureAwait(false);
+
+                if (projeto == null || projeto.Image == null)
+                {
+                    log.success = false;
+                    log.Message = "Nenhuma imagem encontrada";
+
+                    return log;
+                }
+
+                var local = Path.Combine(Directory.GetCurrentDirectory(), "Imagem");
+
+                if (!Directory.Exists(local))
+                {
+                    log.success = false;
+                    log.Message = "Não existe essa pasta";
+                    return log;
+                }
+
+                var NomeArquivo = Path.Combine(local, projeto.Image);
+
+                if (!System.IO.File.Exists(NomeArquivo))
+                {
+                    log.success = false;
+                    log.Message = "Arquivo não existe";
+                    return log;
+                }
+
+                var imagem = System.IO.File.ReadAllBytes(NomeArquivo);
+
+                var extensao = Path.GetExtension(projeto.Image);
+                var mime = $"image/{extensao.Replace(".", "")}";
+
+                log.success = true;
+                log.Message = mime;
+                log.Dados = imagem;
+
+                return log;
+            }catch (Exception ex)
+            {
+                logger.LogError($"Erro inesperado: {ex.Message}");
+                log.success = false;
+                log.Message = $"Erro inesperado: {ex.Message}";
+
                 return log;
             }
         }

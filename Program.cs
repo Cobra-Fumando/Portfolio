@@ -29,9 +29,14 @@ builder.Services.AddScoped<Token>();
 builder.Services.AddScoped<IPasswordHasher<Usuarios>, PasswordHasher<Usuarios>>();
 builder.Services.AddTransient<Hash>();
 builder.Services.AddScoped<EmailSmtp>();
+builder.Services.AddScoped<ObterIp>();
+builder.Services.AddScoped<ValidacaoEmail>();
+builder.Services.AddScoped<Banimento>();
 builder.Services.AddMemoryCache();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddHostedService<Verificacao>();
+builder.Services.AddHostedService<VerificarPasta>();
 
 var key = Encoding.UTF8.GetBytes(builder.Configuration["Token:Key"]);
 var keyAdmin = Encoding.UTF8.GetBytes(builder.Configuration["TokenAdmin:Key"]);
@@ -81,7 +86,7 @@ builder.Services.AddRateLimiter(options =>
         context.HttpContext.Response.ContentType = "application/json";
 
         await context.HttpContext.Response.WriteAsync(
-            "{\"message\": \"Calma lá! Você está fazendo requisições demais.\"}", token);
+            "{\"message\": \"Calma lá! Você está fazendo requisições demais.\"}", token).ConfigureAwait(false);
     };
 
     options.AddFixedWindowLimiter("fixed", config =>
@@ -91,20 +96,22 @@ builder.Services.AddRateLimiter(options =>
         config.QueueLimit = 0;
         config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
     });
-});
 
-builder.Services.AddRateLimiter(options =>
-{
     options.AddFixedWindowLimiter("Adm", config =>
     {
-        config.Window = TimeSpan.FromSeconds(5);
-        config.PermitLimit = 20;
+        config.Window = TimeSpan.FromSeconds(20);
+        config.PermitLimit = 0;
         config.QueueLimit = 0;
         config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
     });
 });
 
-builder.Services.AddHttpContextAccessor();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
 
 var app = builder.Build();
 

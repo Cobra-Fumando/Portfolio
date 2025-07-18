@@ -20,5 +20,7 @@ namespace Portfolio.Tabelas
 
         [Required(ErrorMessage = "Role é obrigatória")]
         public string Role { get; set; } = "Usuarios";
+
+        public string Ip { get; set; } = string.Empty;
     }
 }

@@ -18,7 +18,8 @@ namespace Portfolio.Classes
         private readonly Hash hasher;
         private readonly IHttpContextAccessor responseCookies;
         private readonly EmailSmtp emailSmtp;
-        public Users(ILogger<Users> logger, AppDbContext context, Hash hasher, Token token, IHttpContextAccessor responseCookies, EmailSmtp email)
+        private readonly ObterIp obterIp;
+        public Users(ILogger<Users> logger, AppDbContext context, Hash hasher, Token token, IHttpContextAccessor responseCookies, EmailSmtp email, ObterIp obterIp)
         {
             this.logger = logger;
             this.Context = context;
@@ -26,6 +27,7 @@ namespace Portfolio.Classes
             this.token = token;
             this.responseCookies = responseCookies;
             emailSmtp = email;
+            this.obterIp = obterIp;
         }
 
         private async Task<TabelaProblem<bool>> ValidarToken(string Email)
@@ -75,6 +77,8 @@ namespace Portfolio.Classes
                 return log;
             }
 
+            var UserIp = obterIp.ValidarIp();
+
             var valido = validar.EmailValido(usuarios.Email);
 
             if (!valido)
@@ -84,7 +88,9 @@ namespace Portfolio.Classes
                 return log;
             }
 
-            var existe = await Context.Usuarios.AnyAsync(p => p.Email == usuarios.Email).ConfigureAwait(false);
+            var existe = await Context.Usuarios.AsNoTracking()
+                        .AnyAsync(p => p.Email == usuarios.Email)
+                        .ConfigureAwait(false);
 
             if (existe)
             {
@@ -124,7 +130,8 @@ namespace Portfolio.Classes
                 Email = usuarios.Email,
                 Password = Hash,
                 Name = usuarios.Name,
-                Role = role
+                Role = role,
+                Ip = UserIp
             };
 
             try
@@ -170,23 +177,16 @@ namespace Portfolio.Classes
                     return log;
                 }
 
+                var SenhaHash = hasher.Hashar(Senha);
+
                 var pessoa = await Context.Usuarios.AsNoTracking()
-                            .FirstOrDefaultAsync(p => p.Email == Email)
+                            .FirstOrDefaultAsync(p => p.Email == Email && p.Password == SenhaHash)
                             .ConfigureAwait(false);
 
                 if (pessoa == null)
                 {
                     log.success = false;
-                    log.Message = "Pessoa não encontrada";
-                    return log;
-                }
-
-                var verificado = hasher.Verificar(Senha, pessoa.Password);
-
-                if (!verificado)
-                {
-                    log.success = false;
-                    log.Message = "Email ou Senha incorreto";
+                    log.Message = "Usuarios ou Senha incorreto";
                     return log;
                 }
 

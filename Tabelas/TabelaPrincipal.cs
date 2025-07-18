@@ -9,7 +9,7 @@ namespace Portfolio.Tabelas
         [Key]
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "Image é obrigatória")]
+        [Required(ErrorMessage = "Imagem é obrigatória")]
         public required string Image { get; set; }
 
         [Required(ErrorMessage = "Urls obrigatória")]
